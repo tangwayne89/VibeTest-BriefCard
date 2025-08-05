@@ -15,6 +15,10 @@ COPY requirements.txt .
 # 安裝 Python 依賴
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 安裝 Playwright 瀏覽器
+RUN playwright install chromium
+RUN playwright install-deps
+
 # 複製應用代碼
 COPY . .
 
