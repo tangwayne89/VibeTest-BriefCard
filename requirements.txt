@@ -1,0 +1,23 @@
+# BriefCard Dependencies
+
+# Web Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+
+# Database
+supabase==2.3.0
+
+# Web Scraping & AI
+crawl4ai==0.5.0
+httpx==0.25.2
+
+# LINE Bot SDK
+line-bot-sdk==3.5.0
+
+# Data Validation & Config
+pydantic==2.5.0
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# Utilities
+python-multipart==0.0.6
