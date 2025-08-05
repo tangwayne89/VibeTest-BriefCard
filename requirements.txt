@@ -9,7 +9,7 @@ supabase==2.3.0
 
 # Web Scraping & AI
 crawl4ai==0.5.0
-httpx==0.25.2
+httpx==0.24.1
 
 # LINE Bot SDK
 line-bot-sdk==3.5.0
