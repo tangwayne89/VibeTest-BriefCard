@@ -5,18 +5,18 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 
 # Database
-supabase==2.3.0
+supabase>=2.15.0
 
 # Web Scraping & AI
 crawl4ai==0.5.0
-httpx==0.24.1
+httpx
 
 # LINE Bot SDK
 line-bot-sdk==3.5.0
 
 # Data Validation & Config
 pydantic>=2.10.0
-pydantic-settings==2.1.0
+pydantic-settings
 python-dotenv==1.0.0
 
 # Utilities
