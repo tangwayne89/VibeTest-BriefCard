@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-BriefCard - LINE Bot 服務
-處理 LINE Bot 的所有互動功能
+BriefCard - LINE Bot 智能服務
+處理訊息解析、卡片生成和用戶互動
 """
 
 import re
 import logging
-import json
 import asyncio
-from typing import List, Optional, Dict, Any
+import threading
+from typing import List, Dict, Any
 from urllib.parse import urlparse
 
 from linebot import (
@@ -246,60 +246,34 @@ class LineBotService:
         
     def _handle_general_message(self, event: MessageEvent, message: str, user_id: str):
         """處理一般文字訊息"""
-        
-        # 指令處理
+        # 簡化處理，專注核心功能
         if message.lower() in ['help', '幫助', '/help']:
             self._send_help_message(event.reply_token)
-        elif message.lower() in ['library', '書庫', '/library']:
-            self._send_library_message(event.reply_token, user_id)
         else:
-            # 一般對話
             self._reply_message(
                 event.reply_token,
-                "👋 您好！我是 BriefCard Bot。\n\n" +
-                "📋 請分享任何網頁連結，我會為您生成豐富的預覽卡片！\n\n" +
-                "💡 輸入「幫助」查看更多功能"
+                "👋 歡迎使用 BriefCard！\n\n📋 請分享網頁連結，我會生成精美的預覽卡片\n💡 輸入「幫助」查看功能說明"
             )
     
     def _send_help_message(self, reply_token: str):
         """發送幫助訊息"""
-        help_text = """
-🌟 BriefCard Bot 使用指南
+        help_text = """🌟 BriefCard Bot 功能說明
 
-📋 主要功能:
-• 分享任何網頁連結，自動生成預覽卡片
-• 一鍵保存、分享或稍後閱讀
+📋 主要功能：
+• 分享網頁連結，自動生成預覽卡片
 • AI 智能摘要重點內容
+• 一鍵保存到個人書庫
 
-🔧 可用指令:
-• 「幫助」- 顯示此說明
-• 「書庫」- 查看已保存的書籤
-• 直接分享連結 - 生成預覽卡片
-
-💡 小貼士:
-只需將網頁連結貼上，我就會自動為您處理！
-        """
-        self._reply_message(reply_token, help_text.strip())
+💡 使用方法：
+直接貼上任何網頁連結即可！"""
+        
+        self._reply_message(reply_token, help_text)
     
-    def _send_library_message(self, reply_token: str, user_id: str):
-        """發送書庫訊息"""
-        # TODO: 與後端 API 整合，獲取用戶書籤
-        library_text = f"""
-📚 您的書庫
 
-🔗 正在載入您的書籤...
-
-💡 提示: 這裡將顯示您保存的所有書籤
-您可以透過分享連結來添加新的書籤！
-        """
-        self._reply_message(reply_token, library_text.strip())
     
     def _send_error_message(self, reply_token: str):
         """發送錯誤訊息"""
-        self._reply_message(
-            reply_token,
-            "😅 抱歉，處理您的訊息時發生了錯誤。\n請稍後再試，或聯繫技術支援。"
-        )
+        self._reply_message(reply_token, "😅 處理時發生錯誤，請稍後再試！")
     
     def _reply_message(self, reply_token: str, text: str):
         """回覆文字訊息"""

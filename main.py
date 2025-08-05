@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-BriefCard PoC - FastAPI 主應用
-整合 Supabase、Crawl4AI 和 DeepSeek 的 REST API 服務
+BriefCard - LINE Bot 後端服務
+將任何連結轉換為豐富視覺預覽卡片的智能服務
 """
 
 import asyncio
 import logging
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
@@ -23,10 +23,10 @@ from crawler_service import crawler_service
 from ai_service_factory import ai_service
 from line_bot_service import line_bot_service
 from models import (
-    CreateBookmarkRequest, UpdateBookmarkRequest, CrawlUrlRequest,
-    BookmarkResponse, BookmarkListResponse, CrawlResult, AIAnalysisResult,
-    HealthCheckResponse, ErrorResponse, SuccessResponse,
-    create_error_response, create_success_response
+    CreateBookmarkRequest, CrawlUrlRequest,
+    BookmarkResponse, CrawlResult,
+    HealthCheckResponse, SuccessResponse,
+    create_success_response
 )
 
 # 設定日誌
@@ -70,11 +70,11 @@ async def lifespan(app: FastAPI):
 # ==================== 應用初始化 ====================
 
 app = FastAPI(
-    title="BriefCard PoC API",
-    description="將任何連結轉換為豐富視覺預覽卡片的 LINE Bot 後端服務",
+    title="BriefCard API",
+    description="智能連結預覽卡片生成服務 - LINE Bot 後端",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.debug else None,  # 生產環境隱藏文檔
+    redoc_url=None,  # 移除 ReDoc
     lifespan=lifespan
 )
 
@@ -176,22 +176,19 @@ async def health_check():
         services=services_status
     )
 
-# ==================== 爬蟲相關 API ====================
+# ==================== 測試 API（僅開發模式）====================
 
 @app.post("/api/crawl", response_model=CrawlResult)
 async def crawl_url(request: CrawlUrlRequest):
     """爬取網址內容（測試用）"""
+    if not settings.debug:
+        raise HTTPException(status_code=404, detail="Not Found")
+    
     try:
         result = await crawler_service.extract_content(str(request.url))
-        
-        if not result:
-            raise HTTPException(
-                status_code=400,
-                detail="爬取失敗，請檢查網址是否有效"
-            )
-        
+        if not result or not result.get("success"):
+            raise HTTPException(status_code=400, detail="爬取失敗，請檢查網址是否有效")
         return CrawlResult(**result)
-        
     except Exception as e:
         logger.error(f"❌ 爬取 API 異常: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -257,96 +254,11 @@ async def get_bookmark(bookmark_id: str):
         logger.error(f"❌ 獲取書籤異常: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/bookmarks", response_model=BookmarkListResponse)
-async def get_bookmarks(
-    user_id: Optional[str] = "anonymous",
-    page: int = 1,
-    page_size: int = 50
-):
-    """獲取書籤列表"""
-    try:
-        if not user_id:
-            user_id = "anonymous"
-        
-        bookmarks = await db_client.get_bookmarks_by_user(user_id, page_size)
-        
-        return BookmarkListResponse(
-            bookmarks=[BookmarkResponse(**bookmark) for bookmark in bookmarks],
-            total=len(bookmarks),
-            page=page,
-            page_size=page_size
-        )
-        
-    except Exception as e:
-        logger.error(f"❌ 獲取書籤列表異常: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.put("/api/bookmarks/{bookmark_id}", response_model=BookmarkResponse)
-async def update_bookmark(bookmark_id: str, request: UpdateBookmarkRequest):
-    """更新書籤"""
-    try:
-        # 檢查書籤是否存在
-        existing = await db_client.get_bookmark(bookmark_id)
-        if not existing:
-            raise HTTPException(status_code=404, detail="書籤不存在")
-        
-        # 準備更新資料
-        update_data = {}
-        if request.title is not None:
-            update_data["title"] = request.title
-        if request.tags is not None:
-            update_data["tags"] = request.tags
-        
-        if not update_data:
-            return BookmarkResponse(**existing)
-        
-        result = await db_client.update_bookmark(bookmark_id, update_data)
-        
-        if not result:
-            raise HTTPException(status_code=500, detail="更新書籤失敗")
-        
-        return BookmarkResponse(**result)
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ 更新書籤異常: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/api/bookmarks/{bookmark_id}", response_model=SuccessResponse)
-async def delete_bookmark(bookmark_id: str):
-    """删除書籤"""
-    try:
-        # 檢查書籤是否存在
-        existing = await db_client.get_bookmark(bookmark_id)
-        if not existing:
-            raise HTTPException(status_code=404, detail="書籤不存在")
-        
-        success = await db_client.delete_bookmark(bookmark_id)
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="删除書籤失敗")
-        
-        return create_success_response("書籤已成功删除")
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"❌ 删除書籤異常: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+# ==================== 內部 API（由 LINE Bot 服務調用）====================
+# 其他 CRUD 操作通過內部函數處理，減少公開 API 端點
 
 # ==================== 錯誤處理 ====================
-
-@app.exception_handler(404)
-async def not_found_handler(request, exc):
-    """404 錯誤處理"""
-    return JSONResponse(
-        status_code=404,
-        content=create_error_response(
-            "NOT_FOUND",
-            "請求的資源不存在"
-        ).dict()
-    )
+# 簡化錯誤處理，使用 FastAPI 默認行為
 
 # ==================== LINE Bot Webhook ====================
 
@@ -395,18 +307,7 @@ async def line_webhook(request: Request):
         return JSONResponse(status_code=200, content={"error": "Internal server error"})
 
 # ==================== 異常處理器 ====================
-
-@app.exception_handler(500)
-async def internal_error_handler(request, exc):
-    """500 錯誤處理"""
-    logger.error(f"內部伺服器錯誤: {exc}")
-    return JSONResponse(
-        status_code=500,
-        content=create_error_response(
-            "INTERNAL_ERROR",
-            "內部伺服器錯誤，請稍後再試"
-        ).dict()
-    )
+# 使用 FastAPI 默認錯誤處理，簡化代碼
 
 # ==================== 應用啟動 ====================
 
