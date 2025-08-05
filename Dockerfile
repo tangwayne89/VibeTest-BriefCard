@@ -19,11 +19,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 暴露端口
-EXPOSE 8000
+EXPOSE 8080
 
 # 健康檢查（由 Zeabur 平台處理）
 # HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
 #   CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
 
 # 啟動命令
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]
