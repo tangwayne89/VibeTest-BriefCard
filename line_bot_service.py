@@ -116,38 +116,46 @@ class LineBotService:
                 from database import db_client
                 
                 # 獲取用戶的預設資料夾
+                logger.info(f"🔍 查詢用戶預設資料夾: {user_id}")
                 default_folder = await db_client.get_default_folder(user_id)
+                logger.info(f"🔍 查詢結果: {default_folder}")
+                
                 if not default_folder:
                     logger.error(f"❌ 找不到用戶預設資料夾: {user_id}")
-                    self._reply_message(event.reply_token, "😕 無法找到預設資料夾，請稍後再試。")
-                    return
+                    return "😕 無法找到預設資料夾，請稍後再試。"
                 
                 # 更新書籤，設置 folder_id
                 update_data = {
                     'folder_id': default_folder['id']
                 }
                 
+                logger.info(f"🔄 更新書籤資料: {bookmark_id} -> {default_folder['id']}")
                 result = await db_client.update_bookmark(bookmark_id, update_data)
+                
                 if result:
                     folder_name = default_folder.get('name', '稍後閱讀')
-                    success_message = f"✅ 書籤已保存到「{folder_name}」資料夾！"
-                    self._reply_message(event.reply_token, success_message)
                     logger.info(f"✅ 書籤保存成功: {bookmark_id} → {folder_name}")
+                    return f"✅ 書籤已保存到「{folder_name}」資料夾！"
                 else:
-                    self._reply_message(event.reply_token, "😕 保存失敗，請稍後再試。")
                     logger.error(f"❌ 書籤保存失敗: {bookmark_id}")
+                    return "😕 保存失敗，請稍後再試。"
                     
             except Exception as e:
                 logger.error(f"❌ 保存書籤異步處理失敗: {e}")
-                self._reply_message(event.reply_token, "😅 保存時發生錯誤，請稍後再試。")
+                return "😅 保存時發生錯誤，請稍後再試。"
         
         # 在新的事件循環中執行異步操作
-        import threading
         def run_async():
             try:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                loop.run_until_complete(save_bookmark_async())
+                message = loop.run_until_complete(save_bookmark_async())
+                # 在這裡發送回復
+                logger.info(f"📤 準備發送回復: {message}")
+                self._reply_message(event.reply_token, message)
+            except Exception as e:
+                logger.error(f"❌ Threading 異常: {e}")
+                self._reply_message(event.reply_token, "😅 處理時發生錯誤，請稍後再試。")
             finally:
                 loop.close()
         
