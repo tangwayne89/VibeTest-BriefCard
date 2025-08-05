@@ -254,6 +254,73 @@ async def get_bookmark(bookmark_id: str):
         logger.error(f"❌ 獲取書籤異常: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== LIFF API 端點 ====================
+
+@app.patch("/api/bookmarks/{bookmark_id}", response_model=BookmarkResponse)
+async def update_bookmark(bookmark_id: str, request: dict):
+    """更新書籤資料"""
+    try:
+        result = await db_client.update_bookmark(bookmark_id, request)
+        
+        if not result:
+            raise HTTPException(
+                status_code=404,
+                detail="書籤不存在或更新失敗"
+            )
+        
+        return BookmarkResponse(**result)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ 更新書籤異常: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/folders", response_model=dict)
+async def get_folders(user_id: str):
+    """獲取用戶資料夾列表"""
+    try:
+        folders = await db_client.get_folders_by_user(user_id)
+        
+        return {
+            "folders": folders,
+            "total": len(folders)
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ 獲取資料夾列表異常: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/folders", response_model=dict)
+async def create_folder(request: dict):
+    """建立新資料夾"""
+    try:
+        folder_data = {
+            "id": str(uuid.uuid4()),
+            "user_id": request.get("user_id"),
+            "name": request.get("name"),
+            "color": request.get("color", "#1976D2"),
+            "is_default": request.get("is_default", False),
+            "sort_order": request.get("sort_order", 0),
+            "created_at": datetime.utcnow().isoformat()
+        }
+        
+        result = await db_client.create_folder(folder_data)
+        
+        if not result:
+            raise HTTPException(
+                status_code=500,
+                detail="建立資料夾失敗"
+            )
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ 建立資料夾異常: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== 內部 API（由 LINE Bot 服務調用）====================
 # 其他 CRUD 操作通過內部函數處理，減少公開 API 端點
 

@@ -229,7 +229,7 @@ class LineBotService:
                 
                 if updated_bookmark and updated_bookmark.get("status") == "completed":
                     # 發送成功卡片
-                    flex_card = self.create_bookmark_flex_card(updated_bookmark)
+                    flex_card = self.create_bookmark_flex_card(updated_bookmark, user_id)
                     flex_message = FlexSendMessage(
                         alt_text=f"📋 {updated_bookmark.get('title', '新書籤')}",
                         contents=flex_card
@@ -298,7 +298,7 @@ class LineBotService:
         except Exception as e:
             logger.error(f"❌ 發送訊息失敗: {e}")
     
-    def create_bookmark_flex_card(self, bookmark_data: Dict[str, Any]) -> BubbleContainer:
+    def create_bookmark_flex_card(self, bookmark_data: Dict[str, Any], user_id: str = None) -> BubbleContainer:
         """創建書籤 Flex 卡片 - Phase 1 新設計"""
         # 基本資訊
         title = bookmark_data.get('title', '無標題')
@@ -357,7 +357,7 @@ class LineBotService:
                         "style": "primary",
                         "action": {
                             "type": "uri",
-                            "uri": f"https://your-liff-app.com/edit/{bookmark_id}",
+                            "uri": f"https://your-frontend-app.vercel.app?bookmarkId={bookmark_id}&userId={user_id or 'anonymous'}",
                             "label": "編輯卡片"
                         },
                         "margin": "lg"
@@ -402,7 +402,7 @@ class LineBotService:
             return
         
         try:
-            flex_card = self.create_bookmark_flex_card(bookmark_data)
+            flex_card = self.create_bookmark_flex_card(bookmark_data, user_id)
             flex_message = FlexSendMessage(
                 alt_text=f"📋 {bookmark_data.get('title', '新書籤')}",
                 contents=flex_card
