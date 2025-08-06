@@ -20,7 +20,8 @@ from linebot.exceptions import (
 from linebot.models import (
     MessageEvent, TextMessage, FlexSendMessage, 
     TextSendMessage, PostbackEvent, 
-    BubbleContainer
+    BubbleContainer, RichMenu, RichMenuSize, RichMenuArea, 
+    RichMenuBounds, PostbackAction, URIAction
 )
 
 from config import settings
@@ -46,6 +47,9 @@ class LineBotService:
         
         # 註冊事件處理器
         self._register_handlers()
+        
+        # 設置 Rich Menu
+        self._setup_rich_menu()
         
         logger.info("✅ LINE Bot 服務初始化完成")
     
@@ -99,6 +103,12 @@ class LineBotService:
             if postback_data.startswith("action=save&bookmark_id="):
                 bookmark_id = postback_data.split("bookmark_id=")[1]
                 self._handle_save_bookmark(event, bookmark_id, user_id)
+            elif postback_data == "my_bookmarks":
+                self._handle_my_bookmarks(event, user_id)
+            elif postback_data == "help":
+                self._handle_help(event)
+            elif postback_data == "analytics":
+                self._handle_analytics(event)
             else:
                 logger.warning(f"⚠️ 未知的 PostBack 動作: {postback_data}")
                 self._reply_message(event.reply_token, "🤔 未知的操作，請重新嘗試。")
@@ -191,6 +201,145 @@ class LineBotService:
         thread = threading.Thread(target=run_async)
         thread.daemon = True
         thread.start()
+    
+    def _handle_my_bookmarks(self, event, user_id: str):
+        """處理我的書籤請求"""
+        logger.info(f"📚 處理我的書籤請求 (用戶: {user_id})")
+        
+        # 構建書籤歷史頁面 URL
+        history_url = f"https://vibe-test-brief-card.vercel.app/bookmark-history.html?userId={user_id}"
+        
+        # 回覆訊息
+        message = f"📚 點擊下方連結查看您的書籤歷史：\n{history_url}\n\n您可以在這裡瀏覽、搜尋和管理所有保存的書籤！"
+        self._reply_message(event.reply_token, message)
+    
+    def _handle_help(self, event):
+        """處理幫助請求"""
+        help_message = """
+🤖 **BriefCard 使用指南**
+
+📋 **基本功能**：
+• 發送任何網址給我，我會生成精美的預覽卡片
+• 點擊「編輯卡片」可以自定義標題、選擇資料夾、添加筆記
+• 點擊「保存書籤」將網址快速保存到預設資料夾
+
+📚 **管理書籤**：
+• 使用底部選單的「我的書籤」查看所有保存的連結
+• 在編輯頁面可以創建新的資料夾來整理書籤
+• 支援搜尋功能，快速找到想要的書籤
+
+✨ **小技巧**：
+• 可以在筆記欄添加個人想法和摘要
+• 資料夾名稱建議使用主題分類（如：工作、學習、娛樂）
+• 定期整理書籤，保持資料夾結構清晰
+
+需要更多幫助嗎？隨時發送訊息給我！ 😊
+        """.strip()
+        
+        self._reply_message(event.reply_token, help_message)
+    
+    def _handle_analytics(self, event):
+        """處理分析請求"""
+        analytics_message = """
+📊 **使用分析功能即將推出！**
+
+🚀 **即將提供的分析功能**：
+• 📈 書籤保存趨勢圖表
+• 🏷️ 最常保存的網域統計  
+• ⏰ 使用時間分佈分析
+• 📚 資料夾使用情況
+• 🔥 熱門書籤排行榜
+
+📅 **預計上線時間**：Phase 5 開發階段
+
+敬請期待更多精彩功能！ ✨
+        """.strip()
+        
+        self._reply_message(event.reply_token, analytics_message)
+    
+    def _setup_rich_menu(self):
+        """設置 Rich Menu 底部選單"""
+        try:
+            # 創建 Rich Menu
+            rich_menu = RichMenu(
+                size=RichMenuSize(width=2500, height=1686),
+                selected=False,
+                name="BriefCard 主選單",
+                chat_bar_text="選單",
+                areas=[
+                    RichMenuArea(
+                        bounds=RichMenuBounds(x=0, y=0, width=833, height=1686),
+                        action=PostbackAction(data="help", label="幫助")
+                    ),
+                    RichMenuArea(
+                        bounds=RichMenuBounds(x=833, y=0, width=834, height=1686),
+                        action=PostbackAction(data="analytics", label="分析")
+                    ),
+                    RichMenuArea(
+                        bounds=RichMenuBounds(x=1667, y=0, width=833, height=1686),
+                        action=PostbackAction(data="my_bookmarks", label="我的書籤")
+                    )
+                ]
+            )
+            
+            # 創建 Rich Menu
+            rich_menu_id = self.line_bot_api.create_rich_menu(rich_menu)
+            logger.info(f"✅ Rich Menu 創建成功: {rich_menu_id}")
+            
+            # 上傳 Rich Menu 圖片（使用簡單的純色圖片）
+            self._upload_rich_menu_image(rich_menu_id)
+            
+            # 設置為預設 Rich Menu（所有用戶都會看到）
+            self.line_bot_api.set_default_rich_menu(rich_menu_id)
+            logger.info("✅ Rich Menu 設置為預設選單")
+            
+            # 儲存 Rich Menu ID 以便後續使用
+            self.rich_menu_id = rich_menu_id
+            
+        except Exception as e:
+            logger.error(f"❌ 設置 Rich Menu 失敗: {e}")
+            # Rich Menu 失敗不影響主要功能
+    
+    def _upload_rich_menu_image(self, rich_menu_id: str):
+        """上傳 Rich Menu 圖片"""
+        try:
+            # 創建簡單的 Rich Menu 圖片（2500x1686 像素）
+            from PIL import Image, ImageDraw, ImageFont
+            import io
+            
+            # 創建圖片
+            img = Image.new('RGB', (2500, 1686), color='#f0f0f0')
+            draw = ImageDraw.Draw(img)
+            
+            # 分割線
+            draw.line([(833, 0), (833, 1686)], fill='#cccccc', width=2)
+            draw.line([(1667, 0), (1667, 1686)], fill='#cccccc', width=2)
+            
+            # 添加文字（使用默認字體）
+            try:
+                # 嘗試使用系統字體
+                font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 60)
+            except:
+                # 如果找不到字體，使用默認字體
+                font = ImageFont.load_default()
+            
+            # 繪製按鈕文字
+            draw.text((416, 800), "明細", fill='#333333', font=font, anchor='mm')
+            draw.text((1250, 800), "分析", fill='#333333', font=font, anchor='mm')
+            draw.text((2083, 800), "我的", fill='#333333', font=font, anchor='mm')
+            
+            # 轉換為字節流
+            img_byte_arr = io.BytesIO()
+            img.save(img_byte_arr, format='JPEG', quality=90)
+            img_byte_arr.seek(0)
+            
+            # 上傳圖片
+            self.line_bot_api.set_rich_menu_image(rich_menu_id, "image/jpeg", img_byte_arr)
+            logger.info("✅ Rich Menu 圖片上傳成功")
+            
+        except Exception as e:
+            logger.error(f"❌ 上傳 Rich Menu 圖片失敗: {e}")
+            # 圖片上傳失敗，使用純色背景
     
     def _extract_urls(self, text: str) -> List[str]:
         """從文字中提取 URL"""

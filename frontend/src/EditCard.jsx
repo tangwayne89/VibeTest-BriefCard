@@ -123,6 +123,7 @@ const EditCard = () => {
     
     setIsSaving(true);
     try {
+      // 保存書籤
       await axios.patch(
         `${APP_CONFIG.API_BASE_URL}/api/bookmarks/${bookmark.id}`,
         {
@@ -132,13 +133,27 @@ const EditCard = () => {
         }
       );
 
-      // 顯示成功訊息（可以使用 toast 或其他 UI 元件）
-      alert('✅ 儲存成功！');
+      // 通知後端發送更新後的卡片
+      await axios.post(
+        `${APP_CONFIG.API_BASE_URL}/api/send-updated-card`,
+        {
+          bookmark_id: bookmark.id,
+          user_id: profile?.userId
+        }
+      );
+
+      alert('✅ 儲存成功！正在跳轉回 LINE...');
       
-      // 關閉 LIFF 視窗
+      // 嘗試跳轉回 LINE
       setTimeout(() => {
-        closeLIFF();
-      }, 1000);
+        if (window.liff && window.liff.isInClient()) {
+          window.liff.closeWindow();
+        } else {
+          // 如果不在 LINE 內，顯示提示
+          alert('請返回 LINE 查看更新後的卡片');
+          window.close();
+        }
+      }, 1500);
       
     } catch (err) {
       console.error('儲存失敗:', err);
@@ -404,30 +419,3 @@ const EditCard = () => {
 };
 
 export default EditCard;
-  // 創建新資料夾功能
-  const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) return;
-    
-    try {
-      const response = await axios.post(
-        `${APP_CONFIG.API_BASE_URL}/api/folders`,
-        {
-          user_id: profile?.userId,
-          name: newFolderName.trim(),
-          color: '#1976D2',
-          is_default: false,
-          sort_order: folders.length
-        }
-      );
-      
-      const newFolder = response.data;
-      setFolders(prev => [...prev, newFolder]);
-      setFormData(prev => ({ ...prev, folder_id: newFolder.id }));
-      setNewFolderName('');
-      setShowCreateFolder(false);
-      alert('✅ 資料夾創建成功！');
-    } catch (err) {
-      console.error('創建資料夾失敗:', err);
-      alert('❌ 創建資料夾失敗，請重試');
-    }
-  };
