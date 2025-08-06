@@ -8,7 +8,8 @@ import {
   Image, 
   ArrowLeft,
   Loader2,
-  Sparkles
+  Sparkles,
+  Plus
 } from 'lucide-react';
 import { initLIFF, getLiffProfile, closeLIFF, getLiffParams, APP_CONFIG } from './liff';
 
@@ -31,6 +32,8 @@ const EditCard = () => {
 
   // 錯誤狀態
   const [error, setError] = useState(null);
+  const [showCreateFolder, setShowCreateFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
 
   // 初始化
   useEffect(() => {
@@ -145,6 +148,34 @@ const EditCard = () => {
     }
   };
 
+  // 創建新資料夾功能
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    
+    try {
+      const response = await axios.post(
+        `${APP_CONFIG.API_BASE_URL}/api/folders`,
+        {
+          user_id: profile?.userId,
+          name: newFolderName.trim(),
+          color: '#1976D2',
+          is_default: false,
+          sort_order: folders.length
+        }
+      );
+      
+      const newFolder = response.data;
+      setFolders(prev => [...prev, newFolder]);
+      setFormData(prev => ({ ...prev, folder_id: newFolder.id }));
+      setNewFolderName('');
+      setShowCreateFolder(false);
+      alert('✅ 資料夾創建成功！');
+    } catch (err) {
+      console.error('創建資料夾失敗:', err);
+      alert('❌ 創建資料夾失敗，請重試');
+    }
+  };
+
   // 分享功能 (Phase 2)
   const handleShare = () => {
     alert('🚀 分享功能即將推出！');
@@ -247,15 +278,24 @@ const EditCard = () => {
 
         {/* 資料夾選擇 */}
         <div className="card mb-6">
-          <div className="flex items-center mb-3">
-            <Folder className="h-5 w-5 text-gray-600 mr-2" />
-            <h2 className="text-lg font-medium text-gray-800">資料夾</h2>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center">
+              <Folder className="h-5 w-5 text-gray-600 mr-2" />
+              <h2 className="text-lg font-medium text-gray-800">資料夾</h2>
+            </div>
+            <button 
+              onClick={() => setShowCreateFolder(true)}
+              className="text-sm text-line-green hover:text-line-green-dark flex items-center"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              新增
+            </button>
           </div>
           
           <select
             value={formData.folder_id}
             onChange={(e) => handleInputChange('folder_id', e.target.value)}
-            className="input-field"
+            className="input-field mb-3"
           >
             <option value="">選擇資料夾...</option>
             {folders.map(folder => (
@@ -264,6 +304,35 @@ const EditCard = () => {
               </option>
             ))}
           </select>
+          
+          {/* 創建資料夾輸入框 */}
+          {showCreateFolder && (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="輸入資料夾名稱..."
+                className="input-field flex-1"
+                onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
+              />
+              <button 
+                onClick={handleCreateFolder}
+                className="btn-primary px-3"
+              >
+                建立
+              </button>
+              <button 
+                onClick={() => {
+                  setShowCreateFolder(false);
+                  setNewFolderName('');
+                }}
+                className="btn-secondary px-3"
+              >
+                取消
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 筆記 */}
@@ -335,3 +404,30 @@ const EditCard = () => {
 };
 
 export default EditCard;
+  // 創建新資料夾功能
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    
+    try {
+      const response = await axios.post(
+        `${APP_CONFIG.API_BASE_URL}/api/folders`,
+        {
+          user_id: profile?.userId,
+          name: newFolderName.trim(),
+          color: '#1976D2',
+          is_default: false,
+          sort_order: folders.length
+        }
+      );
+      
+      const newFolder = response.data;
+      setFolders(prev => [...prev, newFolder]);
+      setFormData(prev => ({ ...prev, folder_id: newFolder.id }));
+      setNewFolderName('');
+      setShowCreateFolder(false);
+      alert('✅ 資料夾創建成功！');
+    } catch (err) {
+      console.error('創建資料夾失敗:', err);
+      alert('❌ 創建資料夾失敗，請重試');
+    }
+  };

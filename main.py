@@ -327,6 +327,42 @@ async def create_folder(request: dict):
 # ==================== 錯誤處理 ====================
 # 簡化錯誤處理，使用 FastAPI 默認行為
 
+
+@app.post("/api/send-updated-card")
+async def send_updated_card(request: dict):
+    """發送更新後的書籤卡片到 LINE (解決問題 1: 編輯後跳轉)"""
+    try:
+        bookmark_id = request.get("bookmark_id")
+        user_id = request.get("user_id")
+        
+        if not bookmark_id or not user_id:
+            raise HTTPException(status_code=400, detail="缺少必要參數")
+        
+        # 獲取更新後的書籤資料
+        bookmark = await db_client.get_bookmark(bookmark_id)
+        if not bookmark:
+            raise HTTPException(status_code=404, detail="書籤不存在")
+        
+        # 發送更新後的卡片
+        from line_bot_service import line_bot_service
+        if line_bot_service.enabled:
+            flex_card = line_bot_service.create_bookmark_flex_card(bookmark, user_id)
+            flex_message = FlexSendMessage(
+                alt_text=f"📋 {bookmark.get('title', '更新後的書籤')}",
+                contents=flex_card
+            )
+            
+            # 發送 push message
+            line_bot_service.line_bot_api.push_message(user_id, flex_message)
+            
+            return {"status": "success", "message": "卡片已發送"}
+        else:
+            return {"status": "disabled", "message": "LINE Bot 未啟用"}
+        
+    except Exception as e:
+        logger.error(f"❌ 發送更新卡片失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== LINE Bot Webhook ====================
 
 @app.post("/webhook/line")
