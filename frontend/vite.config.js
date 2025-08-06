@@ -16,7 +16,9 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        'bookmark-history': resolve(__dirname, 'bookmark-history.html')
+        'bookmark-history': resolve(__dirname, 'bookmark-history.html'),
+        'folders': resolve(__dirname, 'folders.html'),
+        'profile': resolve(__dirname, 'profile.html')
       },
       output: {
         manualChunks: {
