@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom/client';
 import { 
   BookOpen, 
   Folder, 
@@ -8,6 +9,7 @@ import {
   X
 } from 'lucide-react';
 import { initLIFF, getLiffProfile, getWebParams } from './liff';
+import './index.css';
 
 // 導入三個功能組件
 import BookmarkHistory from './components/BookmarkHistory';
@@ -262,5 +264,12 @@ const Dashboard = () => {
     </div>
   );
 };
+
+// 渲染到 DOM
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <Dashboard />
+  </React.StrictMode>
+);
 
 export default Dashboard;
