@@ -18,7 +18,8 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         'bookmark-history': resolve(__dirname, 'bookmark-history.html'),
         'folders': resolve(__dirname, 'folders.html'),
-        'profile': resolve(__dirname, 'profile.html')
+        'profile': resolve(__dirname, 'profile.html'),
+        'dashboard': resolve(__dirname, 'dashboard.html')
       },
       output: {
         manualChunks: {

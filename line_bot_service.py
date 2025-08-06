@@ -271,15 +271,15 @@ class LineBotService:
                 areas=[
                     RichMenuArea(
                         bounds=RichMenuBounds(x=0, y=0, width=833, height=1686),
-                        action=URIAction(uri="https://vibe-test-brief-card.vercel.app/bookmark-history.html")
+                        action=URIAction(uri="https://vibe-test-brief-card.vercel.app/dashboard.html?tab=bookmarks")
                     ),
                     RichMenuArea(
                         bounds=RichMenuBounds(x=833, y=0, width=834, height=1686),
-                        action=URIAction(uri="https://vibe-test-brief-card.vercel.app/folders.html")
+                        action=URIAction(uri="https://vibe-test-brief-card.vercel.app/dashboard.html?tab=folders")
                     ),
                     RichMenuArea(
                         bounds=RichMenuBounds(x=1667, y=0, width=833, height=1686),
-                        action=URIAction(uri="https://vibe-test-brief-card.vercel.app/profile.html")
+                        action=URIAction(uri="https://vibe-test-brief-card.vercel.app/dashboard.html?tab=profile")
                     )
                 ]
             )
