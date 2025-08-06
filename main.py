@@ -321,6 +321,54 @@ async def create_folder(request: dict):
         logger.error(f"❌ 建立資料夾異常: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.put("/api/folders/{folder_id}", response_model=dict)
+async def update_folder(folder_id: str, request: dict):
+    """更新資料夾"""
+    try:
+        update_data = {}
+        if "name" in request:
+            update_data["name"] = request["name"]
+        if "color" in request:
+            update_data["color"] = request["color"]
+        if "is_default" in request:
+            update_data["is_default"] = request["is_default"]
+        
+        result = await db_client.update_folder(folder_id, update_data)
+        
+        if not result:
+            raise HTTPException(
+                status_code=404,
+                detail="資料夾不存在"
+            )
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ 更新資料夾異常: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/folders/{folder_id}")
+async def delete_folder(folder_id: str):
+    """刪除資料夾"""
+    try:
+        result = await db_client.delete_folder(folder_id)
+        
+        if not result:
+            raise HTTPException(
+                status_code=404,
+                detail="資料夾不存在"
+            )
+        
+        return {"message": "資料夾已刪除"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ 刪除資料夾異常: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== 書籤歷史管理 API ====================
 
 @app.get("/api/v1/bookmarks/history")
