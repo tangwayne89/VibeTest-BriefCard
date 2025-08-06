@@ -103,12 +103,12 @@ class LineBotService:
             if postback_data.startswith("action=save&bookmark_id="):
                 bookmark_id = postback_data.split("bookmark_id=")[1]
                 self._handle_save_bookmark(event, bookmark_id, user_id)
-            elif postback_data == "my_bookmarks":
-                self._handle_my_bookmarks(event, user_id)
-            elif postback_data == "help":
-                self._handle_help(event)
-            elif postback_data == "analytics":
-                self._handle_analytics(event)
+            elif postback_data == "bookmark_overview":
+                self._handle_bookmark_overview(event, user_id)
+            elif postback_data == "folders":
+                self._handle_folders(event, user_id)
+            elif postback_data == "my_profile":
+                self._handle_my_profile(event, user_id)
             else:
                 logger.warning(f"⚠️ 未知的 PostBack 動作: {postback_data}")
                 self._reply_message(event.reply_token, "🤔 未知的操作，請重新嘗試。")
@@ -257,6 +257,56 @@ class LineBotService:
         
         self._reply_message(event.reply_token, analytics_message)
     
+    def _handle_bookmark_overview(self, event, user_id: str):
+        """處理書籤總覽請求"""
+        logger.info(f"📊 處理書籤總覽請求 (用戶: {user_id})")
+        
+        # 構建書籤歷史頁面 URL
+        overview_url = f"https://vibe-test-brief-card.vercel.app/bookmark-history.html?userId={user_id}"
+        
+        # 回覆訊息
+        message = f"📊 **書籤總覽**\n\n點擊下方連結查看您的書籤總覽：\n{overview_url}\n\n✨ **功能特色**：\n• 📖 瀏覽所有保存的書籤\n• 🔍 快速搜尋功能\n• 📊 使用統計資訊\n• 📅 按時間排序檢視"
+        self._reply_message(event.reply_token, message)
+    
+    def _handle_folders(self, event, user_id: str):
+        """處理資料夾請求"""
+        logger.info(f"📁 處理資料夾請求 (用戶: {user_id})")
+        
+        message = f"""📁 **資料夾管理**
+
+🚀 **即將推出的資料夾功能**：
+• 📂 建立和管理自訂資料夾
+• 🎨 設定資料夾顏色和圖示
+• 📊 查看每個資料夾的書籤統計
+• 🔄 拖拉排序資料夾順序
+• 📋 批量移動書籤到資料夾
+
+📅 **預計上線時間**：Phase 2 開發階段
+
+目前您可以在編輯卡片時創建和選擇資料夾！ ✨"""
+        
+        self._reply_message(event.reply_token, message)
+    
+    def _handle_my_profile(self, event, user_id: str):
+        """處理我的個人設定請求"""
+        logger.info(f"👤 處理個人設定請求 (用戶: {user_id})")
+        
+        message = f"""👤 **個人設定**
+
+🚀 **即將推出的個人功能**：
+• ⏰ 每日提醒時間設定
+• 🌍 時區和語言偏好
+• 🔗 帳戶連結和同步
+• 💾 儲存配額管理
+• 📈 個人使用分析
+• 🔔 通知偏好設定
+
+📅 **預計上線時間**：Phase 3 開發階段
+
+感謝您使用 BriefCard！ 😊"""
+        
+        self._reply_message(event.reply_token, message)
+    
     def _setup_rich_menu(self):
         """設置 Rich Menu 底部選單"""
         try:
@@ -269,15 +319,15 @@ class LineBotService:
                 areas=[
                     RichMenuArea(
                         bounds=RichMenuBounds(x=0, y=0, width=833, height=1686),
-                        action=PostbackAction(data="help", label="幫助")
+                        action=PostbackAction(data="bookmark_overview", label="書籤總覽")
                     ),
                     RichMenuArea(
                         bounds=RichMenuBounds(x=833, y=0, width=834, height=1686),
-                        action=PostbackAction(data="analytics", label="分析")
+                        action=PostbackAction(data="folders", label="資料夾")
                     ),
                     RichMenuArea(
                         bounds=RichMenuBounds(x=1667, y=0, width=833, height=1686),
-                        action=PostbackAction(data="my_bookmarks", label="我的書籤")
+                        action=PostbackAction(data="my_profile", label="我的")
                     )
                 ]
             )
@@ -324,8 +374,8 @@ class LineBotService:
                 font = ImageFont.load_default()
             
             # 繪製按鈕文字
-            draw.text((416, 800), "明細", fill='#333333', font=font, anchor='mm')
-            draw.text((1250, 800), "分析", fill='#333333', font=font, anchor='mm')
+            draw.text((416, 800), "書籤總覽", fill='#333333', font=font, anchor='mm')
+            draw.text((1250, 800), "資料夾", fill='#333333', font=font, anchor='mm')
             draw.text((2083, 800), "我的", fill='#333333', font=font, anchor='mm')
             
             # 轉換為字節流
