@@ -321,6 +321,84 @@ async def create_folder(request: dict):
         logger.error(f"❌ 建立資料夾異常: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== 書籤歷史管理 API ====================
+
+@app.get("/api/v1/bookmarks/history")
+async def get_bookmark_history(
+    user_id: str,
+    page: int = 1,
+    limit: int = 20,
+    sort_by: str = "created_at",
+    order: str = "desc"
+):
+    """獲取用戶書籤歷史（分頁）"""
+    try:
+        offset = (page - 1) * limit
+        bookmarks = await db_client.get_bookmarks_by_user(user_id, limit, offset)
+        
+        # 獲取總數用於分頁計算
+        stats = await db_client.get_bookmark_stats(user_id)
+        total = stats.get("total", 0)
+        total_pages = (total + limit - 1) // limit
+        
+        return {
+            "bookmarks": bookmarks,
+            "pagination": {
+                "current_page": page,
+                "total_pages": total_pages,
+                "total_items": total,
+                "items_per_page": limit,
+                "has_next": page < total_pages,
+                "has_prev": page > 1
+            }
+        }
+    except Exception as e:
+        logger.error(f"❌ 獲取書籤歷史失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/bookmarks/search")
+async def search_bookmarks(user_id: str, q: str, limit: int = 20):
+    """搜索用戶書籤"""
+    try:
+        if not q or len(q.strip()) < 2:
+            raise HTTPException(status_code=400, detail="搜索關鍵字至少需要2個字符")
+        
+        bookmarks = await db_client.search_bookmarks(user_id, q.strip(), limit)
+        
+        return {
+            "query": q,
+            "results": bookmarks,
+            "count": len(bookmarks)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ 搜索書籤失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/v1/bookmarks/stats")
+async def get_bookmark_stats(user_id: str):
+    """獲取用戶書籤統計資訊"""
+    try:
+        stats = await db_client.get_bookmark_stats(user_id)
+        
+        # 添加一些額外的統計資訊
+        recent_bookmarks = await db_client.get_bookmarks_by_user(user_id, limit=5)
+        
+        return {
+            "statistics": stats,
+            "recent_bookmarks": recent_bookmarks,
+            "summary": {
+                "growth_today": stats["today"],
+                "growth_week": stats["this_week"],
+                "growth_month": stats["this_month"],
+                "total_saved": stats["total"]
+            }
+        }
+    except Exception as e:
+        logger.error(f"❌ 獲取書籤統計失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ==================== 內部 API（由 LINE Bot 服務調用）====================
 # 其他 CRUD 操作通過內部函數處理，減少公開 API 端點
 

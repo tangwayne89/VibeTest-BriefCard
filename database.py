@@ -72,19 +72,89 @@ class SupabaseClient:
             logger.error(f"❌ 獲取書籤失敗: {e}")
             return None
     
-    async def get_bookmarks_by_user(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-        """獲取用戶的所有書籤"""
+    async def get_bookmarks_by_user(self, user_id: str, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        """獲取用戶的所有書籤（支援分頁）"""
         try:
             result = (self.client.table("bookmarks")
                      .select("*")
                      .eq("user_id", user_id)
                      .order("created_at", desc=True)
-                     .limit(limit)
+                     .range(offset, offset + limit - 1)
                      .execute())
             return result.data or []
         except Exception as e:
             logger.error(f"❌ 獲取用戶書籤失敗: {e}")
             return []
+    
+    async def search_bookmarks(self, user_id: str, query: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """搜索用戶書籤"""
+        try:
+            # 使用 ilike 進行不區分大小寫的模糊搜索
+            result = (self.client.table("bookmarks")
+                     .select("*")
+                     .eq("user_id", user_id)
+                     .or_(f"title.ilike.%{query}%,url.ilike.%{query}%,notes.ilike.%{query}%")
+                     .order("created_at", desc=True)
+                     .limit(limit)
+                     .execute())
+            return result.data or []
+        except Exception as e:
+            logger.error(f"❌ 搜索書籤失敗: {e}")
+            return []
+    
+    async def get_bookmark_stats(self, user_id: str) -> Dict[str, Any]:
+        """獲取用戶書籤統計資訊"""
+        try:
+            from datetime import datetime, timedelta
+            
+            # 總書籤數
+            total_result = (self.client.table("bookmarks")
+                           .select("id", count="exact")
+                           .eq("user_id", user_id)
+                           .execute())
+            total_count = total_result.count or 0
+            
+            # 今日新增
+            today = datetime.utcnow().date()
+            today_result = (self.client.table("bookmarks")
+                           .select("id", count="exact")
+                           .eq("user_id", user_id)
+                           .gte("created_at", today.isoformat())
+                           .execute())
+            today_count = today_result.count or 0
+            
+            # 本週新增
+            week_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+            week_result = (self.client.table("bookmarks")
+                          .select("id", count="exact")
+                          .eq("user_id", user_id)
+                          .gte("created_at", week_ago)
+                          .execute())
+            week_count = week_result.count or 0
+            
+            # 本月新增
+            month_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()
+            month_result = (self.client.table("bookmarks")
+                           .select("id", count="exact")
+                           .eq("user_id", user_id)
+                           .gte("created_at", month_ago)
+                           .execute())
+            month_count = month_result.count or 0
+            
+            return {
+                "total": total_count,
+                "today": today_count,
+                "this_week": week_count,
+                "this_month": month_count
+            }
+        except Exception as e:
+            logger.error(f"❌ 獲取書籤統計失敗: {e}")
+            return {
+                "total": 0,
+                "today": 0,
+                "this_week": 0,
+                "this_month": 0
+            }
     
     async def update_bookmark(self, bookmark_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """更新書籤資訊"""
