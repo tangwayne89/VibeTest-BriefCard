@@ -357,7 +357,7 @@ class LineBotService:
                         "style": "primary",
                         "action": {
                             "type": "uri",
-                            "uri": f"https://your-frontend-app.vercel.app?bookmarkId={bookmark_id}&userId={user_id or 'anonymous'}",
+                            "uri": f"https://briefcard-frontend.vercel.app?bookmarkId={bookmark_id}&userId={user_id or 'anonymous'}",
                             "label": "編輯卡片"
                         },
                         "margin": "lg"
