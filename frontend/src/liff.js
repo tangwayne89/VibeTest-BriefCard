@@ -1,6 +1,6 @@
 // 網頁版配置（不再使用 LIFF）
 export const APP_CONFIG = {
-  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://your-app.zeabur.app',
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'https://briefcard.zeabur.app',
 };
 
 // 模擬初始化（保持介面一致）

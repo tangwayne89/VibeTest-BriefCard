@@ -33,7 +33,7 @@ class OpenRouterAIService:
             headers={
                 "Authorization": f"Bearer {self.api_key}",
                 "Content-Type": "application/json",
-                "HTTP-Referer": "https://briefcard-poc.vercel.app",  # 你的應用網址
+                "HTTP-Referer": "https://vibe-test-brief-card.vercel.app",  # 你的應用網址
                 "X-Title": "BriefCard PoC"  # 應用名稱
             }
         )

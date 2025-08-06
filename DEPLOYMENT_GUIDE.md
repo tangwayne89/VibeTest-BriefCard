@@ -42,7 +42,7 @@ vercel --prod
 #### 設置環境變數：
 在 Vercel Dashboard 中設置：
 ```
-VITE_API_BASE_URL=https://your-app.zeabur.app
+VITE_API_BASE_URL=https://briefcard.zeabur.app
 ```
 
 ### 3. 更新 LINE Bot 配置
