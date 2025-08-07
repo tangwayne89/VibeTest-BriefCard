@@ -20,8 +20,8 @@ from linebot.exceptions import (
 from linebot.models import (
     MessageEvent, TextMessage, FlexSendMessage, 
     TextSendMessage, PostbackEvent, 
-    BubbleContainer, RichMenu, RichMenuSize, RichMenuArea, 
-    RichMenuBounds, PostbackAction, URIAction
+    BubbleContainer, PostbackAction, URIAction,
+    QuickReply, QuickReplyButton
 )
 
 from config import settings
@@ -47,9 +47,6 @@ class LineBotService:
         
         # 註冊事件處理器
         self._register_handlers()
-        
-        # 設置 Rich Menu
-        self._setup_rich_menu()
         
         logger.info("✅ LINE Bot 服務初始化完成")
     
@@ -167,10 +164,11 @@ class LineBotService:
                     logger.info(f"✅ 書籤保存成功: {bookmark_id} → {folder_name}")
                     
                     # 發送成功訊息
-                    success_message = f"✅ 書籤已保存到「{folder_name}」資料夾！"
+                    success_message = f"✅ 書籤已保存到「{folder_name}」資料夾！\n\n⬇️ 快速選單："
+                    quick_reply = self.create_main_menu_quick_reply()
                     self.line_bot_api.push_message(
                         user_id,
-                        TextSendMessage(text=success_message)
+                        TextSendMessage(text=success_message, quick_reply=quick_reply)
                     )
                 else:
                     logger.error(f"❌ 書籤保存失敗: {bookmark_id}")
@@ -210,8 +208,8 @@ class LineBotService:
         history_url = f"{settings.liff_url}?tab=bookmarks&userId={user_id}"
         
         # 回覆訊息
-        message = f"📚 點擊下方連結查看您的書籤歷史：\n{history_url}\n\n您可以在這裡瀏覽、搜尋和管理所有保存的書籤！"
-        self._reply_message(event.reply_token, message)
+        message = f"📚 點擊下方連結查看您的書籤歷史：\n{history_url}\n\n您可以在這裡瀏覽、搜尋和管理所有保存的書籤！\n\n⬇️ 快速選單："
+        self._reply_message_with_menu(event.reply_token, message)
     
     def _handle_help(self, event):
         """處理幫助請求"""
@@ -259,99 +257,30 @@ class LineBotService:
     
 # 移除了不再需要的 PostBack 處理函數，因為現在直接使用 URI 跳轉
     
-    def _setup_rich_menu(self):
-        """設置 Rich Menu 底部選單"""
-        try:
-            # 創建 Rich Menu
-            rich_menu = RichMenu(
-                size=RichMenuSize(width=2500, height=1686),
-                selected=False,
-                name="BriefCard 主選單",
-                chat_bar_text="選單",
-                areas=[
-                    RichMenuArea(
-                        bounds=RichMenuBounds(x=0, y=0, width=833, height=1686),
-                        action=URIAction(uri=f"{settings.liff_url}?tab=bookmarks")
-                    ),
-                    RichMenuArea(
-                        bounds=RichMenuBounds(x=833, y=0, width=834, height=1686),
-                        action=URIAction(uri=f"{settings.liff_url}?tab=folders")
-                    ),
-                    RichMenuArea(
-                        bounds=RichMenuBounds(x=1667, y=0, width=833, height=1686),
-                        action=URIAction(uri=f"{settings.liff_url}?tab=profile")
+    def create_main_menu_quick_reply(self) -> QuickReply:
+        """創建主選單 Quick Reply 按鈕"""
+        return QuickReply(
+            items=[
+                QuickReplyButton(
+                    action=URIAction(
+                        uri=f"{settings.liff_url}?tab=bookmarks",
+                        label="📚 書籤總覽"
                     )
-                ]
-            )
-            
-            # 創建 Rich Menu
-            rich_menu_id = self.line_bot_api.create_rich_menu(rich_menu)
-            logger.info(f"✅ Rich Menu 創建成功: {rich_menu_id}")
-            
-            # 上傳 Rich Menu 圖片（使用簡單的純色圖片）
-            self._upload_rich_menu_image(rich_menu_id)
-            
-            # 設置為預設 Rich Menu（所有用戶都會看到）
-            self.line_bot_api.set_default_rich_menu(rich_menu_id)
-            logger.info("✅ Rich Menu 設置為預設選單")
-            
-            # 儲存 Rich Menu ID 以便後續使用
-            self.rich_menu_id = rich_menu_id
-            
-        except Exception as e:
-            logger.error(f"❌ 設置 Rich Menu 失敗: {e}")
-            # Rich Menu 失敗不影響主要功能
-    
-    def _upload_rich_menu_image(self, rich_menu_id: str):
-        """上傳 Rich Menu 圖片"""
-        try:
-            import os
-            
-            # 檢查是否存在調整後的圖片
-            if os.path.exists('richmenu_resized.jpg'):
-                logger.info("📁 使用用戶提供的 Rich Menu 圖片")
-                with open('richmenu_resized.jpg', 'rb') as img_file:
-                    self.line_bot_api.set_rich_menu_image(rich_menu_id, "image/jpeg", img_file)
-                logger.info("✅ 用戶 Rich Menu 圖片上傳成功")
-            else:
-                logger.info("📁 使用默認生成的 Rich Menu 圖片")
-                # 創建簡單的 Rich Menu 圖片（2500x1686 像素）
-                from PIL import Image, ImageDraw, ImageFont
-                import io
-                
-                # 創建圖片
-                img = Image.new('RGB', (2500, 1686), color='#f0f0f0')
-                draw = ImageDraw.Draw(img)
-                
-                # 分割線
-                draw.line([(833, 0), (833, 1686)], fill='#cccccc', width=2)
-                draw.line([(1667, 0), (1667, 1686)], fill='#cccccc', width=2)
-                
-                # 添加文字（使用默認字體）
-                try:
-                    # 嘗試使用系統字體
-                    font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 60)
-                except:
-                    # 如果找不到字體，使用默認字體
-                    font = ImageFont.load_default()
-                
-                # 繪製按鈕文字
-                draw.text((416, 800), "書籤總覽", fill='#333333', font=font, anchor='mm')
-                draw.text((1250, 800), "資料夾", fill='#333333', font=font, anchor='mm')
-                draw.text((2083, 800), "我的", fill='#333333', font=font, anchor='mm')
-                
-                # 轉換為字節流
-                img_byte_arr = io.BytesIO()
-                img.save(img_byte_arr, format='JPEG', quality=90)
-                img_byte_arr.seek(0)
-                
-                # 上傳圖片
-                self.line_bot_api.set_rich_menu_image(rich_menu_id, "image/jpeg", img_byte_arr)
-                logger.info("✅ 默認 Rich Menu 圖片上傳成功")
-            
-        except Exception as e:
-            logger.error(f"❌ 上傳 Rich Menu 圖片失敗: {e}")
-            # 圖片上傳失敗，使用純色背景
+                ),
+                QuickReplyButton(
+                    action=URIAction(
+                        uri=f"{settings.liff_url}?tab=folders", 
+                        label="📁 資料夾"
+                    )
+                ),
+                QuickReplyButton(
+                    action=URIAction(
+                        uri=f"{settings.liff_url}?tab=profile",
+                        label="👤 個人檔案"
+                    )
+                )
+            ]
+        )
     
     def _extract_urls(self, text: str) -> List[str]:
         """從文字中提取 URL"""
@@ -447,9 +376,9 @@ class LineBotService:
         if message.lower() in ['help', '幫助', '/help']:
             self._send_help_message(event.reply_token)
         else:
-            self._reply_message(
+            self._reply_message_with_menu(
                 event.reply_token,
-                "👋 歡迎使用 BriefCard！\n\n📋 請分享網頁連結，我會生成精美的預覽卡片\n💡 輸入「幫助」查看功能說明"
+                "👋 歡迎使用 BriefCard！\n\n📋 請分享網頁連結，我會生成精美的預覽卡片\n💡 輸入「幫助」查看功能說明\n\n⬇️ 快速選單："
             )
     
     def _send_help_message(self, reply_token: str):
@@ -462,9 +391,11 @@ class LineBotService:
 • 一鍵保存到個人書庫
 
 💡 使用方法：
-直接貼上任何網頁連結即可！"""
+直接貼上任何網頁連結即可！
+
+⬇️ 快速選單："""
         
-        self._reply_message(reply_token, help_text)
+        self._reply_message_with_menu(reply_token, help_text)
     
 
     
@@ -472,20 +403,26 @@ class LineBotService:
         """發送錯誤訊息"""
         self._reply_message(reply_token, "😅 處理時發生錯誤，請稍後再試！")
     
-    def _reply_message(self, reply_token: str, text: str):
-        """回覆文字訊息"""
+    def _reply_message(self, reply_token: str, text: str, quick_reply: QuickReply = None):
+        """回覆文字訊息，可選擇性加入 Quick Reply"""
         if not self.enabled:
             logger.warning("⚠️ LINE Bot 未啟用，無法發送訊息")
             return
         
         try:
-            self.line_bot_api.reply_message(
-                reply_token,
-                TextSendMessage(text=text)
+            message = TextSendMessage(
+                text=text,
+                quick_reply=quick_reply
             )
+            self.line_bot_api.reply_message(reply_token, message)
             logger.info(f"✅ 訊息發送成功: {text[:50]}...")
         except Exception as e:
             logger.error(f"❌ 發送訊息失敗: {e}")
+    
+    def _reply_message_with_menu(self, reply_token: str, text: str):
+        """回覆文字訊息並附加主選單 Quick Reply"""
+        quick_reply = self.create_main_menu_quick_reply()
+        self._reply_message(reply_token, text, quick_reply)
     
     def create_bookmark_flex_card(self, bookmark_data: Dict[str, Any], user_id: str = None) -> BubbleContainer:
         """創建書籤 Flex 卡片 - Phase 1 新設計"""
