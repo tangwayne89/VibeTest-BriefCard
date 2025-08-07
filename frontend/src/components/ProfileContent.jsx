@@ -164,24 +164,34 @@ const ProfileContent = () => {
           </div>
         </div>
         
-        {/* 統計資訊 */}
+        {/* 使用統計 */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-              <div className="text-sm text-gray-600">總書籤數</div>
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-3">📊 使用統計</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="text-center p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
+                <div className="text-xl font-bold text-blue-600">{stats.total}</div>
+                <div className="text-xs text-blue-700">總書籤數</div>
+              </div>
+              <div className="text-center p-3 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
+                <div className="text-xl font-bold text-green-600">{stats.today}</div>
+                <div className="text-xs text-green-700">今日新增</div>
+              </div>
+              <div className="text-center p-3 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
+                <div className="text-xl font-bold text-orange-600">{stats.this_week}</div>
+                <div className="text-xs text-orange-700">本週新增</div>
+              </div>
+              <div className="text-center p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
+                <div className="text-xl font-bold text-purple-600">{stats.this_month}</div>
+                <div className="text-xs text-purple-700">本月新增</div>
+              </div>
             </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">{stats.today}</div>
-              <div className="text-sm text-gray-600">今日新增</div>
-            </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600">{stats.this_week}</div>
-              <div className="text-sm text-gray-600">本週新增</div>
-            </div>
-            <div className="text-center p-3 bg-gray-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">{stats.this_month}</div>
-              <div className="text-sm text-gray-600">本月新增</div>
+            
+            {/* 使用趨勢提示 */}
+            <div className="mt-3 p-2 bg-gray-50 rounded-md">
+              <p className="text-xs text-gray-600">
+                🎯 {stats.today > 0 ? `今天已新增 ${stats.today} 個書籤，保持好習慣！` : '今天還沒有新增書籤，來收藏一些有趣的內容吧！'}
+              </p>
             </div>
           </div>
         )}
@@ -194,33 +204,49 @@ const ProfileContent = () => {
           <h3 className="text-lg font-semibold text-gray-900">通知設定</h3>
         </div>
         
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium text-gray-900">每日提醒</div>
-              <div className="text-sm text-gray-500">每天提醒您閱讀保存的書籤</div>
+        <div className="space-y-6">
+          {/* 每日提醒主選項 */}
+          <div className="border border-gray-200 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="font-medium text-gray-900">每日提醒</div>
+                <div className="text-sm text-gray-500">每天提醒您閱讀保存的書籤</div>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.notifications.daily_reminder}
+                onChange={(e) => updateSetting('notifications', 'daily_reminder', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
             </div>
-            <input
-              type="checkbox"
-              checked={settings.notifications.daily_reminder}
-              onChange={(e) => updateSetting('notifications', 'daily_reminder', e.target.checked)}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
+            
+            {/* 提醒時間子選項 - 只有啟用每日提醒時才顯示 */}
+            {settings.notifications.daily_reminder && (
+              <div className="ml-4 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium text-gray-700 text-sm">⏰ 提醒時間</div>
+                    <div className="text-xs text-gray-500">選擇每日推送書籤的時間</div>
+                  </div>
+                  <input
+                    type="time"
+                    value={settings.notifications.reminder_time}
+                    onChange={(e) => updateSetting('notifications', 'reminder_time', e.target.value)}
+                    className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                
+                {/* 時間說明 */}
+                <div className="mt-2 p-2 bg-blue-50 rounded-md">
+                  <p className="text-xs text-blue-700">
+                    💡 系統會在您設定的時間推送未讀書籤，幫助您養成閱讀習慣
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
           
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-medium text-gray-900">提醒時間</div>
-              <div className="text-sm text-gray-500">設定每日提醒的時間</div>
-            </div>
-            <input
-              type="time"
-              value={settings.notifications.reminder_time}
-              onChange={(e) => updateSetting('notifications', 'reminder_time', e.target.value)}
-              className="px-3 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          
+          {/* 其他通知選項 */}
           <div className="flex items-center justify-between">
             <div>
               <div className="font-medium text-gray-900">新功能通知</div>

@@ -4,27 +4,22 @@ import {
   Search, 
   Calendar, 
   BookOpen, 
-  TrendingUp,
-  Filter,
-  Grid,
-  List,
   ChevronLeft,
   ChevronRight,
-  BarChart3,
   Clock,
-  Loader2
+  Loader2,
+  Edit3,
+  ExternalLink
 } from 'lucide-react';
 import { APP_CONFIG } from '../liff';
 
 const BookmarkHistory = ({ userId }) => {
   // 狀態管理
   const [bookmarks, setBookmarks] = useState([]);
-  const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
   
   // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1);
@@ -55,20 +50,22 @@ const BookmarkHistory = ({ userId }) => {
     }
   };
 
-  // 載入統計資訊
-  const loadStats = async () => {
-    try {
-      const response = await axios.get(
-        `${APP_CONFIG.API_BASE_URL}/api/v1/bookmarks/stats`,
-        {
-          params: { user_id: userId }
-        }
-      );
-      
-      setStats(response.data);
-    } catch (error) {
-      console.error('載入統計資訊失敗:', error);
-    }
+  // 按日期分組書籤
+  const groupBookmarksByDate = (bookmarks) => {
+    const groups = {};
+    bookmarks.forEach(bookmark => {
+      const date = new Date(bookmark.created_at).toLocaleDateString('zh-TW', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+      });
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(bookmark);
+    });
+    return groups;
   };
 
   // 搜索書籤
@@ -130,78 +127,66 @@ const BookmarkHistory = ({ userId }) => {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
-  // 書籤卡片組件
-  const BookmarkCard = ({ bookmark, isGrid = false }) => (
-    <div className={`bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow ${isGrid ? 'p-4' : 'p-4 flex gap-4'}`}>
-      {/* 圖片 */}
-      {bookmark.image_url && (
-        <div className={isGrid ? 'mb-3' : 'flex-shrink-0'}>
-          <img 
-            src={bookmark.image_url} 
-            alt={bookmark.title}
-            className={isGrid ? 'w-full h-32 object-cover rounded-md' : 'w-16 h-16 object-cover rounded-md'}
-            onError={(e) => {e.target.style.display = 'none'}}
-          />
-        </div>
-      )}
-      
-      {/* 內容 */}
-      <div className="flex-1 min-w-0">
-        <h3 className="font-medium text-gray-900 mb-1">
-          {truncateText(bookmark.title || bookmark.url, isGrid ? 60 : 80)}
-        </h3>
-        
-        {bookmark.description && (
-          <p className="text-sm text-gray-600 mb-2">
-            {truncateText(bookmark.description, isGrid ? 80 : 120)}
-          </p>
+  // 書籤預覽卡片組件 - 簡化版本，點擊進入編輯頁
+  const BookmarkPreviewCard = ({ bookmark, onClick }) => (
+    <div 
+      onClick={() => onClick(bookmark)}
+      className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all cursor-pointer hover:border-blue-300 p-3"
+    >
+      <div className="flex gap-3">
+        {/* 預覽圖片 */}
+        {bookmark.image_url && (
+          <div className="flex-shrink-0">
+            <img 
+              src={bookmark.image_url} 
+              alt={bookmark.title}
+              className="w-16 h-16 object-cover rounded-md"
+              onError={(e) => {e.target.style.display = 'none'}}
+            />
+          </div>
         )}
         
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <div className="flex items-center gap-2">
-            <Clock className="h-3 w-3" />
-            <span>{formatDate(bookmark.created_at)}</span>
-          </div>
+        {/* 內容預覽 */}
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-gray-900 mb-1 line-clamp-2">
+            {bookmark.title || bookmark.url}
+          </h3>
           
-          {bookmark.folder_id && (
-            <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs">
-              已分類
-            </span>
+          {bookmark.description && (
+            <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+              {bookmark.description}
+            </p>
           )}
-        </div>
-        
-        {bookmark.notes && (
-          <div className="mt-2 p-2 bg-gray-50 rounded text-sm text-gray-600">
-            {truncateText(bookmark.notes, 100)}
+          
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <Clock className="h-3 w-3" />
+              <span>{new Date(bookmark.created_at).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Edit3 className="h-3 w-3 text-blue-500" />
+              <ExternalLink className="h-3 w-3 text-gray-400" />
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 
-  // 統計卡片組件
-  const StatCard = ({ title, value, icon: Icon, color = "blue" }) => (
-    <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-200">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className={`text-2xl font-bold text-${color}-600`}>{value}</p>
-        </div>
-        <Icon className={`h-8 w-8 text-${color}-500`} />
-      </div>
-    </div>
-  );
+  // 處理卡片點擊 - 導向編輯頁面
+  const handleCardClick = (bookmark) => {
+    // 構建編輯頁面 URL
+    const editUrl = `https://vibe-test-brief-card.vercel.app?bookmarkId=${bookmark.id}&userId=${userId}`;
+    window.open(editUrl, '_blank');
+  };
 
   // 初始化載入
   useEffect(() => {
     if (userId) {
       loadBookmarkHistory();
-      loadStats();
     }
   }, [userId]);
-
-  // 顯示的書籤列表
-  const displayBookmarks = searchQuery ? searchResults : bookmarks;
 
   if (loading) {
     return (
@@ -212,80 +197,31 @@ const BookmarkHistory = ({ userId }) => {
     );
   }
 
+  // 顯示的書籤列表和日期分組
+  const displayBookmarks = searchQuery ? searchResults : bookmarks;
+  const groupedBookmarks = groupBookmarksByDate(displayBookmarks);
+
   return (
-    <div className="max-w-6xl mx-auto p-4 space-y-6">
+    <div className="max-w-4xl mx-auto p-4 space-y-6">
       {/* 標題 */}
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">我的書籤歷史</h1>
-        <p className="text-gray-600">管理和查看您收藏的所有書籤</p>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">我的書籤</h1>
+        <p className="text-gray-600">瀏覽您收藏的精彩內容</p>
       </div>
 
-      {/* 統計卡片 */}
-      {stats.statistics && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard 
-            title="總書籤" 
-            value={stats.statistics.total} 
-            icon={BookOpen}
-            color="blue"
-          />
-          <StatCard 
-            title="今日新增" 
-            value={stats.statistics.today} 
-            icon={TrendingUp}
-            color="green"
-          />
-          <StatCard 
-            title="本週新增" 
-            value={stats.statistics.this_week} 
-            icon={Calendar}
-            color="purple"
-          />
-          <StatCard 
-            title="本月新增" 
-            value={stats.statistics.this_month} 
-            icon={BarChart3}
-            color="orange"
-          />
-        </div>
-      )}
-
-      {/* 搜索和視圖控制 */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        {/* 搜索框 */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="搜索書籤..."
-            value={searchQuery}
-            onChange={handleSearchInput}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          {searching && (
-            <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-blue-600" />
-          )}
-        </div>
-
-        {/* 視圖切換 */}
-        <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => setViewMode('list')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <List className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-md transition-colors ${
-              viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <Grid className="h-4 w-4" />
-          </button>
-        </div>
+      {/* 搜索框 */}
+      <div className="relative max-w-md mx-auto">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <input
+          type="text"
+          placeholder="搜索書籤..."
+          value={searchQuery}
+          onChange={handleSearchInput}
+          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        {searching && (
+          <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 animate-spin text-blue-600" />
+        )}
       </div>
 
       {/* 搜索結果提示 */}
@@ -302,15 +238,32 @@ const BookmarkHistory = ({ userId }) => {
         </div>
       )}
 
-      {/* 書籤列表 */}
-      {displayBookmarks.length > 0 ? (
-        <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4'}>
-          {displayBookmarks.map((bookmark) => (
-            <BookmarkCard 
-              key={bookmark.id} 
-              bookmark={bookmark} 
-              isGrid={viewMode === 'grid'}
-            />
+      {/* 按日期分組的書籤列表 */}
+      {Object.keys(groupedBookmarks).length > 0 ? (
+        <div className="space-y-6">
+          {Object.entries(groupedBookmarks)
+            .sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA))
+            .map(([date, dateBookmarks]) => (
+            <div key={date} className="space-y-3">
+              {/* 日期標題容器 */}
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-900">{date}</h2>
+                <div className="flex-1 h-px bg-gray-200"></div>
+                <span className="text-sm text-gray-500">{dateBookmarks.length} 個書籤</span>
+              </div>
+              
+              {/* 該日期的書籤卡片 */}
+              <div className="space-y-3 pl-8">
+                {dateBookmarks.map((bookmark) => (
+                  <BookmarkPreviewCard 
+                    key={bookmark.id} 
+                    bookmark={bookmark}
+                    onClick={handleCardClick}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       ) : (

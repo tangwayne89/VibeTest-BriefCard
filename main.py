@@ -295,16 +295,33 @@ async def get_folders(user_id: str):
 async def create_folder(request: dict):
     """建立新資料夾"""
     try:
+        # 驗證必要欄位
+        user_id = request.get("user_id")
+        name = request.get("name")
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="缺少 user_id")
+        if not name or not name.strip():
+            raise HTTPException(status_code=400, detail="資料夾名稱不能為空")
+        
+        # 如果設為預設資料夾，先取消其他預設資料夾
+        if request.get("is_default", False):
+            existing_folders = await db_client.get_folders_by_user(user_id)
+            for folder in existing_folders:
+                if folder.get("is_default"):
+                    await db_client.update_folder(folder["id"], {"is_default": False})
+        
         folder_data = {
             "id": str(uuid.uuid4()),
-            "user_id": request.get("user_id"),
-            "name": request.get("name"),
+            "user_id": user_id,
+            "name": name.strip(),
             "color": request.get("color", "#1976D2"),
             "is_default": request.get("is_default", False),
             "sort_order": request.get("sort_order", 0),
             "created_at": datetime.utcnow().isoformat()
         }
         
+        logger.info(f"📁 創建資料夾: {folder_data}")
         result = await db_client.create_folder(folder_data)
         
         if not result:
@@ -313,6 +330,7 @@ async def create_folder(request: dict):
                 detail="建立資料夾失敗"
             )
         
+        logger.info(f"✅ 資料夾創建成功: {result['id']}")
         return result
         
     except HTTPException:

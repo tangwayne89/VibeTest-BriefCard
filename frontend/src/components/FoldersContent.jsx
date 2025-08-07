@@ -72,10 +72,26 @@ const FoldersContent = () => {
 
   // 創建資料夾
   const handleCreateFolder = async () => {
-    if (!formData.name.trim()) return;
+    if (!formData.name.trim()) {
+      alert('請輸入資料夾名稱');
+      return;
+    }
+    
+    if (!profile?.userId) {
+      alert('用戶資訊不完整，請重新載入頁面');
+      return;
+    }
     
     setIsCreating(true);
     try {
+      console.log('創建資料夾請求:', {
+        user_id: profile.userId,
+        name: formData.name.trim(),
+        color: formData.color,
+        is_default: formData.is_default,
+        sort_order: folders.length
+      });
+      
       const response = await axios.post(
         `${APP_CONFIG.API_BASE_URL}/api/folders`,
         {
@@ -84,16 +100,27 @@ const FoldersContent = () => {
           color: formData.color,
           is_default: formData.is_default,
           sort_order: folders.length
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
       );
+      
+      console.log('創建資料夾回應:', response.data);
       
       setFolders(prev => [...prev, response.data]);
       setFormData({ name: '', color: '#1976D2', is_default: false });
       setShowCreateForm(false);
+      alert('✅ 資料夾創建成功！');
       
     } catch (error) {
       console.error('創建資料夾失敗:', error);
-      alert('❌ 創建資料夾失敗，請重試');
+      console.error('錯誤詳情:', error.response?.data);
+      
+      const errorMessage = error.response?.data?.detail || error.message || '未知錯誤';
+      alert(`❌ 創建資料夾失敗: ${errorMessage}`);
     } finally {
       setIsCreating(false);
     }
