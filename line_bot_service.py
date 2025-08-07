@@ -207,7 +207,7 @@ class LineBotService:
         logger.info(f"📚 處理我的書籤請求 (用戶: {user_id})")
         
         # 構建書籤歷史頁面 URL
-        history_url = f"https://vibe-test-brief-card.vercel.app/bookmark-history.html?userId={user_id}"
+        history_url = f"{settings.liff_url}?tab=bookmarks&userId={user_id}"
         
         # 回覆訊息
         message = f"📚 點擊下方連結查看您的書籤歷史：\n{history_url}\n\n您可以在這裡瀏覽、搜尋和管理所有保存的書籤！"
@@ -271,15 +271,15 @@ class LineBotService:
                 areas=[
                     RichMenuArea(
                         bounds=RichMenuBounds(x=0, y=0, width=833, height=1686),
-                        action=URIAction(uri="https://vibe-test-brief-card.vercel.app/dashboard.html?tab=bookmarks")
+                        action=URIAction(uri=f"{settings.liff_url}?tab=bookmarks")
                     ),
                     RichMenuArea(
                         bounds=RichMenuBounds(x=833, y=0, width=834, height=1686),
-                        action=URIAction(uri="https://vibe-test-brief-card.vercel.app/dashboard.html?tab=folders")
+                        action=URIAction(uri=f"{settings.liff_url}?tab=folders")
                     ),
                     RichMenuArea(
                         bounds=RichMenuBounds(x=1667, y=0, width=833, height=1686),
-                        action=URIAction(uri="https://vibe-test-brief-card.vercel.app/dashboard.html?tab=profile")
+                        action=URIAction(uri=f"{settings.liff_url}?tab=profile")
                     )
                 ]
             )
@@ -546,7 +546,7 @@ class LineBotService:
                         "style": "primary",
                         "action": {
                             "type": "uri",
-                            "uri": f"https://vibe-test-brief-card.vercel.app?bookmarkId={bookmark_id}&userId={user_id or 'anonymous'}",
+                            "uri": f"{settings.liff_url}?bookmarkId={bookmark_id}&userId={user_id or 'anonymous'}",
                             "label": "編輯卡片"
                         },
                         "margin": "lg"

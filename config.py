@@ -41,6 +41,10 @@ class Settings(BaseSettings):
     line_channel_access_token: Optional[str] = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
     line_channel_secret: Optional[str] = os.getenv("LINE_CHANNEL_SECRET")
     
+    # LIFF 配置
+    liff_id: str = os.getenv("LIFF_ID", "2007890677-Wa6jeBz3")
+    liff_url: str = os.getenv("LIFF_URL", "https://liff.line.me/2007890677-Wa6jeBz3")
+    
     # 爬蟲設定
     crawler_timeout: int = int(os.getenv("CRAWLER_TIMEOUT", "30"))
     max_content_length: int = int(os.getenv("MAX_CONTENT_LENGTH", "50000"))

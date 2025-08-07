@@ -11,7 +11,17 @@ import {
   Sparkles,
   Plus
 } from 'lucide-react';
-import { initLIFF, getLiffProfile, closeLIFF, getLiffParams, APP_CONFIG } from './liff';
+import { 
+  initLIFF, 
+  getLiffProfile, 
+  closeLIFF, 
+  getLiffParams, 
+  shareContent,
+  sendMessage,
+  isLiffEnvironment,
+  getDeviceInfo,
+  APP_CONFIG 
+} from './liff';
 
 const EditCard = () => {
   // 狀態管理
@@ -191,9 +201,39 @@ const EditCard = () => {
     }
   };
 
-  // 分享功能 (Phase 2)
-  const handleShare = () => {
-    alert('🚀 分享功能即將推出！');
+  // 分享功能
+  const handleShare = async () => {
+    if (!bookmark) {
+      alert('❌ 沒有可分享的內容');
+      return;
+    }
+
+    try {
+      const shareData = {
+        title: formData.title || bookmark.title || '書籤卡片',
+        description: formData.notes || bookmark.summary || '來看看這個有趣的內容！',
+        url: formData.url || bookmark.url,
+        imageUrl: formData.image_url || bookmark.image_url,
+        altText: `${formData.title || bookmark.title} - 透過 BriefCard 分享`
+      };
+
+      const success = await shareContent(shareData);
+      
+      if (success) {
+        // 如果在 LIFF 環境中，可以發送確認訊息
+        if (isLiffEnvironment()) {
+          console.log('✅ 卡片已成功分享到 LINE');
+        } else {
+          console.log('✅ 內容已成功分享');
+        }
+      } else {
+        alert('❌ 分享失敗，請重試');
+      }
+      
+    } catch (error) {
+      console.error('分享失敗:', error);
+      alert('❌ 分享過程中發生錯誤');
+    }
   };
 
   // 產生 AI 摘要 (Phase 2)
